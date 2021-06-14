@@ -89,6 +89,60 @@ entries:
       artifacthub.io/operator: "true"
     apiVersion: v2
     appVersion: 0.48.1
+    created: "2021-06-14T13:16:07.938190874Z"
+    dependencies:
+    - condition: kubeStateMetrics.enabled
+      name: kube-state-metrics
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 3.1.*
+    - condition: nodeExporter.enabled
+      name: prometheus-node-exporter
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 1.18.*
+    - condition: grafana.enabled
+      name: grafana
+      repository: https://grafana.github.io/helm-charts
+      version: 6.12.*
+    description: kube-prometheus-stack collects Kubernetes manifests, Grafana dashboards,
+      and Prometheus rules combined with documentation and scripts to provide easy
+      to operate end-to-end Kubernetes cluster monitoring with Prometheus using the
+      Prometheus Operator.
+    digest: e591109a855219d14a7a04ba8aefe8c9d7ec43ea49464f95f4141f6103dd7b90
+    home: https://github.com/prometheus-operator/kube-prometheus
+    icon: https://raw.githubusercontent.com/prometheus/prometheus.github.io/master/assets/prometheus_logo-cb55bb5c346.png
+    keywords:
+    - operator
+    - prometheus
+    - kube-prometheus
+    kubeVersion: '>=1.16.0-0'
+    maintainers:
+    - name: vsliouniaev
+    - name: bismarck
+    - email: gianrubio@gmail.com
+      name: gianrubio
+    - email: github.gkarthiks@gmail.com
+      name: gkarthiks
+    - email: scott@r6by.com
+      name: scottrigby
+    - email: miroslav.hadzhiev@gmail.com
+      name: Xtigyro
+    name: kube-prometheus-stack
+    sources:
+    - https://github.com/prometheus-community/helm-charts
+    - https://github.com/prometheus-operator/kube-prometheus
+    type: application
+    urls:
+    - https://github.com/giffgaff/prometheus-charts/releases/download/kube-prometheus-stack-16.7.0/kube-prometheus-stack-16.7.0.tgz
+    version: 16.7.0
+  - annotations:
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/prometheus-community/helm-charts
+        - name: Upstream Project
+          url: https://github.com/prometheus-operator/kube-prometheus
+      artifacthub.io/operator: "true"
+    apiVersion: v2
+    appVersion: 0.48.1
     created: "2021-06-10T09:27:56.225795375Z"
     dependencies:
     - condition: kubeStateMetrics.enabled
@@ -531,6 +585,29 @@ entries:
     - https://github.com/prometheus-community/helm-charts/releases/download/kube-prometheus-stack-9.3.4/kube-prometheus-stack-9.3.4.tgz
     version: 9.3.4
   kube-state-metrics:
+  - apiVersion: v2
+    appVersion: 2.0.0
+    created: "2021-06-14T13:16:08.058417707Z"
+    description: Install kube-state-metrics to generate and expose cluster-level metrics
+    digest: 78225f4e978b203b789ef005aafdf9a879f5a428b5422a5890d29311b6695b56
+    home: https://github.com/kubernetes/kube-state-metrics/
+    keywords:
+    - metric
+    - monitoring
+    - prometheus
+    - kubernetes
+    maintainers:
+    - email: tariq.ibrahim@mulesoft.com
+      name: tariq1890
+    - email: manuel@rueg.eu
+      name: mrueg
+    name: kube-state-metrics
+    sources:
+    - https://github.com/kubernetes/kube-state-metrics/
+    type: application
+    urls:
+    - https://github.com/giffgaff/prometheus-charts/releases/download/kube-state-metrics-3.2.1/kube-state-metrics-3.2.1.tgz
+    version: 3.2.1
   - apiVersion: v2
     appVersion: 2.0.0
     created: "2021-06-10T09:27:56.424083049Z"
