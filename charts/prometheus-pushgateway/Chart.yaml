@@ -2,7 +2,7 @@ apiVersion: v2
 appVersion: "v1.10.0"
 description: A Helm chart for prometheus pushgateway
 name: prometheus-pushgateway
-version: 2.15.0
+version: 2.15.1
 home: https://github.com/prometheus/pushgateway
 sources:
   - https://github.com/prometheus/pushgateway
@@ -22,3 +22,8 @@ annotations:
   "artifacthub.io/links": |
     - name: Chart Source
       url: https://github.com/prometheus-community/helm-charts
+
+dependencies:
+  - name: istio-virtualservice
+    version: 0.1.5
+    repository: s3://giffgaff-charts
