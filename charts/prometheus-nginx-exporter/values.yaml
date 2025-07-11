@@ -27,14 +27,17 @@ image:
 nameOverride: ""
 fullnameOverride: ""
 
+# Overide deployment namespace
+namespaceOverride: ""
+
 # Add your nginx server details here
 nginxServer: "http://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.cluster.local:8080/stub_status"
 # nginxServer: "http://frontend.default.svc.cluster.local:8080/stub_status"
 
 # Arguments - https://github.com/nginxinc/nginx-prometheus-exporter#command-line-arguments
 options: {}
-  # -nginx.plus
-  # -nginx.retries int
+  # nginx.plus:
+  # nginx.timeout: 5s
 
 livenessProbe:
   httpGet:
@@ -54,9 +57,10 @@ service:
   type: ClusterIP
   port: 9113
   annotations: {}
+  # External traffic policy setting (Cluster, Local)
+  externalTrafficPolicy: ""
 
 podAnnotations: {}
-
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -86,12 +90,18 @@ serviceMonitor:
   # Set of labels to transfer on the Kubernetes Service onto the target.
   # targetLabels: []
   # metricRelabelings: []
+  # relabelings: []
 
 nodeSelector: {}
 
 tolerations: []
 
 affinity: {}
+
+# Additional Annotations and Labels for Deployment
+deployment:
+  annotations: {}
+  labels: {}
 
 # Extra environment variables
 extraEnv: []

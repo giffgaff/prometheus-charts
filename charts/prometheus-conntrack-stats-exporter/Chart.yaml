@@ -2,8 +2,9 @@ apiVersion: v2
 name: prometheus-conntrack-stats-exporter
 description: A Helm chart for conntrack-stats-exporter
 type: application
-version: 0.5.12
-appVersion: v0.4.20
+version: 0.5.21
+# renovate: github=jwkohnen/conntrack-stats-exporter
+appVersion: v0.4.30
 home: https://github.com/jwkohnen/conntrack-stats-exporter
 sources:
   - https://github.com/jwkohnen/conntrack-stats-exporter
@@ -15,3 +16,4 @@ keywords:
 maintainers:
   - name: monotek
     email: monotek23@gmail.com
+    url: https://github.com/monotek

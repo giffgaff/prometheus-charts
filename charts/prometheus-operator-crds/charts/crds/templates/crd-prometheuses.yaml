@@ -1,4 +1,5 @@
-# https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.77.1/example/prometheus-operator-crd/monitoring.coreos.com_prometheuses.yaml
+{{- if .Values.prometheuses.enabled -}}
+# https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.83.0/example/prometheus-operator-crd/monitoring.coreos.com_prometheuses.yaml
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -7,8 +8,8 @@ metadata:
 {{- with .Values.annotations }}
 {{- toYaml . | nindent 4 }}
 {{- end }}
-    controller-gen.kubebuilder.io/version: v0.16.1
-    operator.prometheus.io/version: 0.77.1
+    controller-gen.kubebuilder.io/version: v0.18.0
+    operator.prometheus.io/version: 0.83.0
   name: prometheuses.monitoring.coreos.com
 spec:
   group: monitoring.coreos.com
@@ -503,7 +504,6 @@ spec:
                                     pod labels will be ignored. The default value is empty.
                                     The same key is forbidden to exist in both matchLabelKeys and labelSelector.
                                     Also, matchLabelKeys cannot be set when labelSelector isn't set.
-                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                   items:
                                     type: string
                                   type: array
@@ -518,7 +518,6 @@ spec:
                                     pod labels will be ignored. The default value is empty.
                                     The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
                                     Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                   items:
                                     type: string
                                   type: array
@@ -684,7 +683,6 @@ spec:
                                 pod labels will be ignored. The default value is empty.
                                 The same key is forbidden to exist in both matchLabelKeys and labelSelector.
                                 Also, matchLabelKeys cannot be set when labelSelector isn't set.
-                                This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                               items:
                                 type: string
                               type: array
@@ -699,7 +697,6 @@ spec:
                                 pod labels will be ignored. The default value is empty.
                                 The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
                                 Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-                                This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                               items:
                                 type: string
                               type: array
@@ -862,7 +859,6 @@ spec:
                                     pod labels will be ignored. The default value is empty.
                                     The same key is forbidden to exist in both matchLabelKeys and labelSelector.
                                     Also, matchLabelKeys cannot be set when labelSelector isn't set.
-                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                   items:
                                     type: string
                                   type: array
@@ -877,7 +873,6 @@ spec:
                                     pod labels will be ignored. The default value is empty.
                                     The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
                                     Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-                                    This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                                   items:
                                     type: string
                                   type: array
@@ -1043,7 +1038,6 @@ spec:
                                 pod labels will be ignored. The default value is empty.
                                 The same key is forbidden to exist in both matchLabelKeys and labelSelector.
                                 Also, matchLabelKeys cannot be set when labelSelector isn't set.
-                                This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                               items:
                                 type: string
                               type: array
@@ -1058,7 +1052,6 @@ spec:
                                 pod labels will be ignored. The default value is empty.
                                 The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
                                 Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-                                This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).
                               items:
                                 type: string
                               type: array
@@ -1242,7 +1235,13 @@ spec:
                         apiVersion:
                           description: |-
                             Version of the Alertmanager API that Prometheus uses to send alerts.
-                            It can be "v1" or "v2".
+                            It can be "V1" or "V2".
+                            The field has no effect for Prometheus >= v3.0.0 because only the v2 API is supported.
+                          enum:
+                          - v1
+                          - V1
+                          - v2
+                          - V2
                           type: string
                         authorization:
                           description: |-
@@ -1366,6 +1365,14 @@ spec:
                             Prometheus object.
                           minLength: 1
                           type: string
+                        noProxy:
+                          description: |-
+                            `noProxy` is a comma-separated string that can contain IPs, CIDR notation, domain names
+                            that should be excluded from proxying. IP and domain names can
+                            contain port numbers.
+
+                            It requires Prometheus >= v2.43.0, Alertmanager >= v0.25.0 or Thanos >= v0.32.0.
+                          type: string
                         pathPrefix:
                           description: Prefix for the HTTP path alerts are pushed
                             to.
@@ -1376,6 +1383,51 @@ spec:
                           - type: string
                           description: Port on which the Alertmanager API is exposed.
                           x-kubernetes-int-or-string: true
+                        proxyConnectHeader:
+                          additionalProperties:
+                            items:
+                              description: SecretKeySelector selects a key of a Secret.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            type: array
+                          description: |-
+                            ProxyConnectHeader optionally specifies headers to send to
+                            proxies during CONNECT requests.
+
+                            It requires Prometheus >= v2.43.0, Alertmanager >= v0.25.0 or Thanos >= v0.32.0.
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        proxyFromEnvironment:
+                          description: |-
+                            Whether to use the proxy configuration defined by environment variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+
+                            It requires Prometheus >= v2.43.0, Alertmanager >= v0.25.0 or Thanos >= v0.32.0.
+                          type: boolean
+                        proxyUrl:
+                          description: '`proxyURL` defines the HTTP proxy server to
+                            use.'
+                          pattern: ^(http|https|socks5)://.+$
+                          type: string
                         relabelings:
                           description: Relabel configuration applied to the discovered
                             Alertmanagers.
@@ -1700,7 +1752,7 @@ spec:
                               description: |-
                                 Maximum acceptable TLS version.
 
-                                It requires Prometheus >= v2.41.0.
+                                It requires Prometheus >= v2.41.0 or Thanos >= v0.31.0.
                               enum:
                               - TLS10
                               - TLS11
@@ -1711,7 +1763,7 @@ spec:
                               description: |-
                                 Minimum acceptable TLS version.
 
-                                It requires Prometheus >= v2.35.0.
+                                It requires Prometheus >= v2.35.0 or Thanos >= v0.28.0.
                               enum:
                               - TLS10
                               - TLS11
@@ -2022,7 +2074,7 @@ spec:
                         description: |-
                           Maximum acceptable TLS version.
 
-                          It requires Prometheus >= v2.41.0.
+                          It requires Prometheus >= v2.41.0 or Thanos >= v0.31.0.
                         enum:
                         - TLS10
                         - TLS11
@@ -2033,7 +2085,7 @@ spec:
                         description: |-
                           Minimum acceptable TLS version.
 
-                          It requires Prometheus >= v2.35.0.
+                          It requires Prometheus >= v2.35.0 or Thanos >= v0.28.0.
                         enum:
                         - TLS10
                         - TLS11
@@ -2276,7 +2328,7 @@ spec:
                         Cannot be updated.
                       items:
                         description: EnvFromSource represents the source of a set
-                          of ConfigMaps
+                          of ConfigMaps or Secrets
                         properties:
                           configMapRef:
                             description: The ConfigMap to select from
@@ -2297,8 +2349,8 @@ spec:
                             type: object
                             x-kubernetes-map-type: atomic
                           prefix:
-                            description: An optional identifier to prepend to each
-                              key in the ConfigMap. Must be a C_IDENTIFIER.
+                            description: Optional text to prepend to the name of each
+                              environment variable. Must be a C_IDENTIFIER.
                             type: string
                           secretRef:
                             description: The Secret to select from
@@ -2348,7 +2400,8 @@ spec:
                             More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                           properties:
                             exec:
-                              description: Exec specifies the action to take.
+                              description: Exec specifies a command to execute in
+                                the container.
                               properties:
                                 command:
                                   description: |-
@@ -2363,7 +2416,8 @@ spec:
                                   x-kubernetes-list-type: atomic
                               type: object
                             httpGet:
-                              description: HTTPGet specifies the http request to perform.
+                              description: HTTPGet specifies an HTTP GET request to
+                                perform.
                               properties:
                                 host:
                                   description: |-
@@ -2412,8 +2466,8 @@ spec:
                               - port
                               type: object
                             sleep:
-                              description: Sleep represents the duration that the
-                                container should sleep before being terminated.
+                              description: Sleep represents a duration that the container
+                                should sleep.
                               properties:
                                 seconds:
                                   description: Seconds is the number of seconds to
@@ -2426,8 +2480,8 @@ spec:
                             tcpSocket:
                               description: |-
                                 Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-                                for the backward compatibility. There are no validation of this field and
-                                lifecycle hooks will fail in runtime when tcp handler is specified.
+                                for backward compatibility. There is no validation of this field and
+                                lifecycle hooks will fail at runtime when it is specified.
                               properties:
                                 host:
                                   description: 'Optional: Host name to connect to,
@@ -2459,7 +2513,8 @@ spec:
                             More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                           properties:
                             exec:
-                              description: Exec specifies the action to take.
+                              description: Exec specifies a command to execute in
+                                the container.
                               properties:
                                 command:
                                   description: |-
@@ -2474,7 +2529,8 @@ spec:
                                   x-kubernetes-list-type: atomic
                               type: object
                             httpGet:
-                              description: HTTPGet specifies the http request to perform.
+                              description: HTTPGet specifies an HTTP GET request to
+                                perform.
                               properties:
                                 host:
                                   description: |-
@@ -2523,8 +2579,8 @@ spec:
                               - port
                               type: object
                             sleep:
-                              description: Sleep represents the duration that the
-                                container should sleep before being terminated.
+                              description: Sleep represents a duration that the container
+                                should sleep.
                               properties:
                                 seconds:
                                   description: Seconds is the number of seconds to
@@ -2537,8 +2593,8 @@ spec:
                             tcpSocket:
                               description: |-
                                 Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-                                for the backward compatibility. There are no validation of this field and
-                                lifecycle hooks will fail in runtime when tcp handler is specified.
+                                for backward compatibility. There is no validation of this field and
+                                lifecycle hooks will fail at runtime when it is specified.
                               properties:
                                 host:
                                   description: 'Optional: Host name to connect to,
@@ -2557,6 +2613,12 @@ spec:
                               - port
                               type: object
                           type: object
+                        stopSignal:
+                          description: |-
+                            StopSignal defines which signal will be sent to a container when it is being stopped.
+                            If not specified, the default is defined by the container runtime in use.
+                            StopSignal can only be set for Pods with a non-empty .spec.os.name
+                          type: string
                       type: object
                     livenessProbe:
                       description: |-
@@ -2566,7 +2628,8 @@ spec:
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                       properties:
                         exec:
-                          description: Exec specifies the action to take.
+                          description: Exec specifies a command to execute in the
+                            container.
                           properties:
                             command:
                               description: |-
@@ -2587,7 +2650,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: GRPC specifies an action involving a GRPC port.
+                          description: GRPC specifies a GRPC HealthCheckRequest.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -2606,7 +2669,7 @@ spec:
                           - port
                           type: object
                         httpGet:
-                          description: HTTPGet specifies the http request to perform.
+                          description: HTTPGet specifies an HTTP GET request to perform.
                           properties:
                             host:
                               description: |-
@@ -2673,8 +2736,7 @@ spec:
                           format: int32
                           type: integer
                         tcpSocket:
-                          description: TCPSocket specifies an action involving a TCP
-                            port.
+                          description: TCPSocket specifies a connection to a TCP port.
                           properties:
                             host:
                               description: 'Optional: Host name to connect to, defaults
@@ -2778,7 +2840,8 @@ spec:
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                       properties:
                         exec:
-                          description: Exec specifies the action to take.
+                          description: Exec specifies a command to execute in the
+                            container.
                           properties:
                             command:
                               description: |-
@@ -2799,7 +2862,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: GRPC specifies an action involving a GRPC port.
+                          description: GRPC specifies a GRPC HealthCheckRequest.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -2818,7 +2881,7 @@ spec:
                           - port
                           type: object
                         httpGet:
-                          description: HTTPGet specifies the http request to perform.
+                          description: HTTPGet specifies an HTTP GET request to perform.
                           properties:
                             host:
                               description: |-
@@ -2885,8 +2948,7 @@ spec:
                           format: int32
                           type: integer
                         tcpSocket:
-                          description: TCPSocket specifies an action involving a TCP
-                            port.
+                          description: TCPSocket specifies a connection to a TCP port.
                           properties:
                             host:
                               description: 'Optional: Host name to connect to, defaults
@@ -3234,7 +3296,8 @@ spec:
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                       properties:
                         exec:
-                          description: Exec specifies the action to take.
+                          description: Exec specifies a command to execute in the
+                            container.
                           properties:
                             command:
                               description: |-
@@ -3255,7 +3318,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: GRPC specifies an action involving a GRPC port.
+                          description: GRPC specifies a GRPC HealthCheckRequest.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -3274,7 +3337,7 @@ spec:
                           - port
                           type: object
                         httpGet:
-                          description: HTTPGet specifies the http request to perform.
+                          description: HTTPGet specifies an HTTP GET request to perform.
                           properties:
                             host:
                               description: |-
@@ -3341,8 +3404,7 @@ spec:
                           format: int32
                           type: integer
                         tcpSocket:
-                          description: TCPSocket specifies an action involving a TCP
-                            port.
+                          description: TCPSocket specifies a connection to a TCP port.
                           properties:
                             host:
                               description: 'Optional: Host name to connect to, defaults
@@ -3526,9 +3588,73 @@ spec:
                   - name
                   type: object
                 type: array
-              disableCompaction:
-                description: When true, the Prometheus compaction is disabled.
+              convertClassicHistogramsToNHCB:
+                description: |-
+                  Whether to convert all scraped classic histograms into a native
+                  histogram with custom buckets.
+
+                  It requires Prometheus >= v3.4.0.
                 type: boolean
+              disableCompaction:
+                description: |-
+                  When true, the Prometheus compaction is disabled.
+                  When `spec.thanos.objectStorageConfig` or `spec.objectStorageConfigFile` are defined, the operator automatically
+                  disables block compaction to avoid race conditions during block uploads (as the Thanos documentation recommends).
+                type: boolean
+              dnsConfig:
+                description: Defines the DNS configuration for the pods.
+                properties:
+                  nameservers:
+                    description: |-
+                      A list of DNS name server IP addresses.
+                      This will be appended to the base nameservers generated from DNSPolicy.
+                    items:
+                      minLength: 1
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: set
+                  options:
+                    description: |-
+                      A list of DNS resolver options.
+                      This will be merged with the base options generated from DNSPolicy.
+                      Resolution options given in Options
+                      will override those that appear in the base DNSPolicy.
+                    items:
+                      description: PodDNSConfigOption defines DNS resolver options
+                        of a pod.
+                      properties:
+                        name:
+                          description: Name is required and must be unique.
+                          minLength: 1
+                          type: string
+                        value:
+                          description: Value is optional.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
+                  searches:
+                    description: |-
+                      A list of DNS search domains for host-name lookup.
+                      This will be appended to the base search paths generated from DNSPolicy.
+                    items:
+                      minLength: 1
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: set
+                type: object
+              dnsPolicy:
+                description: Defines the DNS policy for the pods.
+                enum:
+                - ClusterFirstWithHostNet
+                - ClusterFirst
+                - Default
+                - None
+                type: string
               enableAdminAPI:
                 description: |-
                   Enables access to the Prometheus web admin API.
@@ -3555,6 +3681,14 @@ spec:
                   type: string
                 type: array
                 x-kubernetes-list-type: set
+              enableOTLPReceiver:
+                description: |-
+                  Enable Prometheus to be used as a receiver for the OTLP Metrics protocol.
+
+                  Note that the OTLP receiver endpoint is automatically enabled if `.spec.otlpConfig` is defined.
+
+                  It requires Prometheus >= v2.47.0.
+                type: boolean
               enableRemoteWriteReceiver:
                 description: |-
                   Enable Prometheus to be used as a receiver for the Prometheus remote
@@ -3567,6 +3701,10 @@ spec:
                   For more information see https://prometheus.io/docs/prometheus/latest/querying/api/#remote-write-receiver
 
                   It requires Prometheus >= v2.33.0.
+                type: boolean
+              enableServiceLinks:
+                description: Indicates whether information about services should be
+                  injected into pod's environment variables
                 type: boolean
               enforcedBodySizeLimit:
                 description: |-
@@ -3812,7 +3950,8 @@ spec:
                   it (https://kubernetes.io/docs/concepts/configuration/overview/).
 
                   When hostNetwork is enabled, this will set the DNS policy to
-                  `ClusterFirstWithHostNet` automatically.
+                  `ClusterFirstWithHostNet` automatically (unless `.spec.DNSPolicy` is set
+                  to a different value).
                 type: boolean
               ignoreNamespaceSelectors:
                 description: |-
@@ -4049,7 +4188,7 @@ spec:
                         Cannot be updated.
                       items:
                         description: EnvFromSource represents the source of a set
-                          of ConfigMaps
+                          of ConfigMaps or Secrets
                         properties:
                           configMapRef:
                             description: The ConfigMap to select from
@@ -4070,8 +4209,8 @@ spec:
                             type: object
                             x-kubernetes-map-type: atomic
                           prefix:
-                            description: An optional identifier to prepend to each
-                              key in the ConfigMap. Must be a C_IDENTIFIER.
+                            description: Optional text to prepend to the name of each
+                              environment variable. Must be a C_IDENTIFIER.
                             type: string
                           secretRef:
                             description: The Secret to select from
@@ -4121,7 +4260,8 @@ spec:
                             More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                           properties:
                             exec:
-                              description: Exec specifies the action to take.
+                              description: Exec specifies a command to execute in
+                                the container.
                               properties:
                                 command:
                                   description: |-
@@ -4136,7 +4276,8 @@ spec:
                                   x-kubernetes-list-type: atomic
                               type: object
                             httpGet:
-                              description: HTTPGet specifies the http request to perform.
+                              description: HTTPGet specifies an HTTP GET request to
+                                perform.
                               properties:
                                 host:
                                   description: |-
@@ -4185,8 +4326,8 @@ spec:
                               - port
                               type: object
                             sleep:
-                              description: Sleep represents the duration that the
-                                container should sleep before being terminated.
+                              description: Sleep represents a duration that the container
+                                should sleep.
                               properties:
                                 seconds:
                                   description: Seconds is the number of seconds to
@@ -4199,8 +4340,8 @@ spec:
                             tcpSocket:
                               description: |-
                                 Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-                                for the backward compatibility. There are no validation of this field and
-                                lifecycle hooks will fail in runtime when tcp handler is specified.
+                                for backward compatibility. There is no validation of this field and
+                                lifecycle hooks will fail at runtime when it is specified.
                               properties:
                                 host:
                                   description: 'Optional: Host name to connect to,
@@ -4232,7 +4373,8 @@ spec:
                             More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                           properties:
                             exec:
-                              description: Exec specifies the action to take.
+                              description: Exec specifies a command to execute in
+                                the container.
                               properties:
                                 command:
                                   description: |-
@@ -4247,7 +4389,8 @@ spec:
                                   x-kubernetes-list-type: atomic
                               type: object
                             httpGet:
-                              description: HTTPGet specifies the http request to perform.
+                              description: HTTPGet specifies an HTTP GET request to
+                                perform.
                               properties:
                                 host:
                                   description: |-
@@ -4296,8 +4439,8 @@ spec:
                               - port
                               type: object
                             sleep:
-                              description: Sleep represents the duration that the
-                                container should sleep before being terminated.
+                              description: Sleep represents a duration that the container
+                                should sleep.
                               properties:
                                 seconds:
                                   description: Seconds is the number of seconds to
@@ -4310,8 +4453,8 @@ spec:
                             tcpSocket:
                               description: |-
                                 Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-                                for the backward compatibility. There are no validation of this field and
-                                lifecycle hooks will fail in runtime when tcp handler is specified.
+                                for backward compatibility. There is no validation of this field and
+                                lifecycle hooks will fail at runtime when it is specified.
                               properties:
                                 host:
                                   description: 'Optional: Host name to connect to,
@@ -4330,6 +4473,12 @@ spec:
                               - port
                               type: object
                           type: object
+                        stopSignal:
+                          description: |-
+                            StopSignal defines which signal will be sent to a container when it is being stopped.
+                            If not specified, the default is defined by the container runtime in use.
+                            StopSignal can only be set for Pods with a non-empty .spec.os.name
+                          type: string
                       type: object
                     livenessProbe:
                       description: |-
@@ -4339,7 +4488,8 @@ spec:
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                       properties:
                         exec:
-                          description: Exec specifies the action to take.
+                          description: Exec specifies a command to execute in the
+                            container.
                           properties:
                             command:
                               description: |-
@@ -4360,7 +4510,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: GRPC specifies an action involving a GRPC port.
+                          description: GRPC specifies a GRPC HealthCheckRequest.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -4379,7 +4529,7 @@ spec:
                           - port
                           type: object
                         httpGet:
-                          description: HTTPGet specifies the http request to perform.
+                          description: HTTPGet specifies an HTTP GET request to perform.
                           properties:
                             host:
                               description: |-
@@ -4446,8 +4596,7 @@ spec:
                           format: int32
                           type: integer
                         tcpSocket:
-                          description: TCPSocket specifies an action involving a TCP
-                            port.
+                          description: TCPSocket specifies a connection to a TCP port.
                           properties:
                             host:
                               description: 'Optional: Host name to connect to, defaults
@@ -4551,7 +4700,8 @@ spec:
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                       properties:
                         exec:
-                          description: Exec specifies the action to take.
+                          description: Exec specifies a command to execute in the
+                            container.
                           properties:
                             command:
                               description: |-
@@ -4572,7 +4722,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: GRPC specifies an action involving a GRPC port.
+                          description: GRPC specifies a GRPC HealthCheckRequest.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -4591,7 +4741,7 @@ spec:
                           - port
                           type: object
                         httpGet:
-                          description: HTTPGet specifies the http request to perform.
+                          description: HTTPGet specifies an HTTP GET request to perform.
                           properties:
                             host:
                               description: |-
@@ -4658,8 +4808,7 @@ spec:
                           format: int32
                           type: integer
                         tcpSocket:
-                          description: TCPSocket specifies an action involving a TCP
-                            port.
+                          description: TCPSocket specifies a connection to a TCP port.
                           properties:
                             host:
                               description: 'Optional: Host name to connect to, defaults
@@ -5007,7 +5156,8 @@ spec:
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                       properties:
                         exec:
-                          description: Exec specifies the action to take.
+                          description: Exec specifies a command to execute in the
+                            container.
                           properties:
                             command:
                               description: |-
@@ -5028,7 +5178,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: GRPC specifies an action involving a GRPC port.
+                          description: GRPC specifies a GRPC HealthCheckRequest.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -5047,7 +5197,7 @@ spec:
                           - port
                           type: object
                         httpGet:
-                          description: HTTPGet specifies the http request to perform.
+                          description: HTTPGet specifies an HTTP GET request to perform.
                           properties:
                             host:
                               description: |-
@@ -5114,8 +5264,7 @@ spec:
                           format: int32
                           type: integer
                         tcpSocket:
-                          description: TCPSocket specifies an action involving a TCP
-                            port.
+                          description: TCPSocket specifies a connection to a TCP port.
                           properties:
                             host:
                               description: 'Optional: Host name to connect to, defaults
@@ -5376,6 +5525,28 @@ spec:
                   enabling the StatefulSetMinReadySeconds feature gate.
                 format: int32
                 type: integer
+              nameEscapingScheme:
+                description: |-
+                  Specifies the character escaping scheme that will be requested when scraping
+                  for metric and label names that do not conform to the legacy Prometheus
+                  character set.
+
+                  It requires Prometheus >= v3.4.0.
+                enum:
+                - AllowUTF8
+                - Underscores
+                - Dots
+                - Values
+                type: string
+              nameValidationScheme:
+                description: |-
+                  Specifies the validation scheme for metric and label names.
+
+                  It requires Prometheus >= v2.55.0.
+                enum:
+                - UTF8
+                - Legacy
+                type: string
               nodeSelector:
                 additionalProperties:
                   type: string
@@ -5384,8 +5555,20 @@ spec:
               otlp:
                 description: |-
                   Settings related to the OTLP receiver feature.
-                  It requires Prometheus >= v2.54.0.
+                  It requires Prometheus >= v2.55.0.
                 properties:
+                  convertHistogramsToNHCB:
+                    description: |-
+                      Configures optional translation of OTLP explicit bucket histograms into native histograms with custom buckets.
+                      It requires Prometheus >= v3.4.0.
+                    type: boolean
+                  keepIdentifyingResourceAttributes:
+                    description: |-
+                      Enables adding `service.name`, `service.namespace` and `service.instance.id`
+                      resource attributes to the `target_info` metric, on top of converting them into the `instance` and `job` labels.
+
+                      It requires Prometheus >= v3.1.0.
+                    type: boolean
                   promoteResourceAttributes:
                     description: List of OpenTelemetry Attributes that should be promoted
                       to metric labels, defaults to none.
@@ -5395,6 +5578,16 @@ spec:
                     minItems: 1
                     type: array
                     x-kubernetes-list-type: set
+                  translationStrategy:
+                    description: |-
+                      Configures how the OTLP receiver endpoint translates the incoming metrics.
+
+                      It requires Prometheus >= v3.0.0.
+                    enum:
+                    - NoUTF8EscapingWithSuffixes
+                    - UnderscoreEscapingWithSuffixes
+                    - NoTranslation
+                    type: string
                 type: object
               overrideHonorLabels:
                 description: |-
@@ -5945,7 +6138,7 @@ spec:
                         that should be excluded from proxying. IP and domain names can
                         contain port numbers.
 
-                        It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                        It requires Prometheus >= v2.43.0, Alertmanager >= v0.25.0 or Thanos >= v0.32.0.
                       type: string
                     oauth2:
                       description: |-
@@ -6048,7 +6241,7 @@ spec:
                             that should be excluded from proxying. IP and domain names can
                             contain port numbers.
 
-                            It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                            It requires Prometheus >= v2.43.0, Alertmanager >= v0.25.0 or Thanos >= v0.32.0.
                           type: string
                         proxyConnectHeader:
                           additionalProperties:
@@ -6081,19 +6274,19 @@ spec:
                             ProxyConnectHeader optionally specifies headers to send to
                             proxies during CONNECT requests.
 
-                            It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                            It requires Prometheus >= v2.43.0, Alertmanager >= v0.25.0 or Thanos >= v0.32.0.
                           type: object
                           x-kubernetes-map-type: atomic
                         proxyFromEnvironment:
                           description: |-
                             Whether to use the proxy configuration defined by environment variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
 
-                            It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                            It requires Prometheus >= v2.43.0, Alertmanager >= v0.25.0 or Thanos >= v0.32.0.
                           type: boolean
                         proxyUrl:
                           description: '`proxyURL` defines the HTTP proxy server to
                             use.'
-                          pattern: ^http(s)?://.+$
+                          pattern: ^(http|https|socks5)://.+$
                           type: string
                         scopes:
                           description: '`scopes` defines the OAuth2 scopes used for
@@ -6246,7 +6439,7 @@ spec:
                               description: |-
                                 Maximum acceptable TLS version.
 
-                                It requires Prometheus >= v2.41.0.
+                                It requires Prometheus >= v2.41.0 or Thanos >= v0.31.0.
                               enum:
                               - TLS10
                               - TLS11
@@ -6257,7 +6450,7 @@ spec:
                               description: |-
                                 Minimum acceptable TLS version.
 
-                                It requires Prometheus >= v2.35.0.
+                                It requires Prometheus >= v2.35.0 or Thanos >= v0.28.0.
                               enum:
                               - TLS10
                               - TLS11
@@ -6309,18 +6502,18 @@ spec:
                         ProxyConnectHeader optionally specifies headers to send to
                         proxies during CONNECT requests.
 
-                        It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                        It requires Prometheus >= v2.43.0, Alertmanager >= v0.25.0 or Thanos >= v0.32.0.
                       type: object
                       x-kubernetes-map-type: atomic
                     proxyFromEnvironment:
                       description: |-
                         Whether to use the proxy configuration defined by environment variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
 
-                        It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                        It requires Prometheus >= v2.43.0, Alertmanager >= v0.25.0 or Thanos >= v0.32.0.
                       type: boolean
                     proxyUrl:
                       description: '`proxyURL` defines the HTTP proxy server to use.'
-                      pattern: ^http(s)?://.+$
+                      pattern: ^(http|https|socks5)://.+$
                       type: string
                     readRecent:
                       description: |-
@@ -6490,7 +6683,7 @@ spec:
                           description: |-
                             Maximum acceptable TLS version.
 
-                            It requires Prometheus >= v2.41.0.
+                            It requires Prometheus >= v2.41.0 or Thanos >= v0.31.0.
                           enum:
                           - TLS10
                           - TLS11
@@ -6501,7 +6694,7 @@ spec:
                           description: |-
                             Minimum acceptable TLS version.
 
-                            It requires Prometheus >= v2.35.0.
+                            It requires Prometheus >= v2.35.0 or Thanos >= v0.28.0.
                           enum:
                           - TLS10
                           - TLS11
@@ -6530,7 +6723,7 @@ spec:
                       description: |-
                         Authorization section for the URL.
 
-                        It requires Prometheus >= v2.26.0.
+                        It requires Prometheus >= v2.26.0 or Thanos >= v0.24.0.
 
                         Cannot be set at the same time as `sigv4`, `basicAuth`, `oauth2`, or `azureAd`.
                       properties:
@@ -6576,7 +6769,7 @@ spec:
                       description: |-
                         AzureAD for the URL.
 
-                        It requires Prometheus >= v2.45.0.
+                        It requires Prometheus >= v2.45.0 or Thanos >= v0.31.0.
 
                         Cannot be set at the same time as `authorization`, `basicAuth`, `oauth2`, or `sigv4`.
                       properties:
@@ -6604,7 +6797,7 @@ spec:
                             OAuth defines the oauth config that is being used to authenticate.
                             Cannot be set at the same time as `managedIdentity` or `sdk`.
 
-                            It requires Prometheus >= v2.48.0.
+                            It requires Prometheus >= v2.48.0 or Thanos >= v0.31.0.
                           properties:
                             clientId:
                               description: '`clientID` is the clientId of the Azure
@@ -6656,7 +6849,7 @@ spec:
                             See https://learn.microsoft.com/en-us/azure/developer/go/azure-sdk-authentication
                             Cannot be set at the same time as `oauth` or `managedIdentity`.
 
-                            It requires Prometheus >= 2.52.0.
+                            It requires Prometheus >= v2.52.0 or Thanos >= v0.36.0.
                           properties:
                             tenantId:
                               description: '`tenantId` is the tenant ID of the azure
@@ -6745,7 +6938,7 @@ spec:
                       description: |-
                         Configure whether HTTP requests follow HTTP 3xx redirects.
 
-                        It requires Prometheus >= v2.26.0.
+                        It requires Prometheus >= v2.26.0 or Thanos >= v0.24.0.
                       type: boolean
                     headers:
                       additionalProperties:
@@ -6754,12 +6947,38 @@ spec:
                         Custom HTTP headers to be sent along with each remote write request.
                         Be aware that headers that are set by Prometheus itself can't be overwritten.
 
-                        It requires Prometheus >= v2.25.0.
+                        It requires Prometheus >= v2.25.0 or Thanos >= v0.24.0.
                       type: object
+                    messageVersion:
+                      description: |-
+                        The Remote Write message's version to use when writing to the endpoint.
+
+                        `Version1.0` corresponds to the `prometheus.WriteRequest` protobuf message introduced in Remote Write 1.0.
+                        `Version2.0` corresponds to the `io.prometheus.write.v2.Request` protobuf message introduced in Remote Write 2.0.
+
+                        When `Version2.0` is selected, Prometheus will automatically be
+                        configured to append the metadata of scraped metrics to the WAL.
+
+                        Before setting this field, consult with your remote storage provider
+                        what message version it supports.
+
+                        It requires Prometheus >= v2.54.0 or Thanos >= v0.37.0.
+                      enum:
+                      - V1.0
+                      - V2.0
+                      type: string
                     metadataConfig:
                       description: MetadataConfig configures the sending of series
                         metadata to the remote storage.
                       properties:
+                        maxSamplesPerSend:
+                          description: |-
+                            MaxSamplesPerSend is the maximum number of metadata samples per send.
+
+                            It requires Prometheus >= v2.29.0.
+                          format: int32
+                          minimum: -1
+                          type: integer
                         send:
                           description: Defines whether metric metadata is sent to
                             the remote storage or not.
@@ -6775,7 +6994,7 @@ spec:
                         The name of the remote write queue, it must be unique if specified. The
                         name is used in metrics and logging in order to differentiate queues.
 
-                        It requires Prometheus >= v2.15.0.
+                        It requires Prometheus >= v2.15.0 or Thanos >= 0.24.0.
                       type: string
                     noProxy:
                       description: |-
@@ -6783,13 +7002,13 @@ spec:
                         that should be excluded from proxying. IP and domain names can
                         contain port numbers.
 
-                        It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                        It requires Prometheus >= v2.43.0, Alertmanager >= v0.25.0 or Thanos >= v0.32.0.
                       type: string
                     oauth2:
                       description: |-
                         OAuth2 configuration for the URL.
 
-                        It requires Prometheus >= v2.27.0.
+                        It requires Prometheus >= v2.27.0 or Thanos >= v0.24.0.
 
                         Cannot be set at the same time as `sigv4`, `authorization`, `basicAuth`, or `azureAd`.
                       properties:
@@ -6886,7 +7105,7 @@ spec:
                             that should be excluded from proxying. IP and domain names can
                             contain port numbers.
 
-                            It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                            It requires Prometheus >= v2.43.0, Alertmanager >= v0.25.0 or Thanos >= v0.32.0.
                           type: string
                         proxyConnectHeader:
                           additionalProperties:
@@ -6919,19 +7138,19 @@ spec:
                             ProxyConnectHeader optionally specifies headers to send to
                             proxies during CONNECT requests.
 
-                            It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                            It requires Prometheus >= v2.43.0, Alertmanager >= v0.25.0 or Thanos >= v0.32.0.
                           type: object
                           x-kubernetes-map-type: atomic
                         proxyFromEnvironment:
                           description: |-
                             Whether to use the proxy configuration defined by environment variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
 
-                            It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                            It requires Prometheus >= v2.43.0, Alertmanager >= v0.25.0 or Thanos >= v0.32.0.
                           type: boolean
                         proxyUrl:
                           description: '`proxyURL` defines the HTTP proxy server to
                             use.'
-                          pattern: ^http(s)?://.+$
+                          pattern: ^(http|https|socks5)://.+$
                           type: string
                         scopes:
                           description: '`scopes` defines the OAuth2 scopes used for
@@ -7084,7 +7303,7 @@ spec:
                               description: |-
                                 Maximum acceptable TLS version.
 
-                                It requires Prometheus >= v2.41.0.
+                                It requires Prometheus >= v2.41.0 or Thanos >= v0.31.0.
                               enum:
                               - TLS10
                               - TLS11
@@ -7095,7 +7314,7 @@ spec:
                               description: |-
                                 Minimum acceptable TLS version.
 
-                                It requires Prometheus >= v2.35.0.
+                                It requires Prometheus >= v2.35.0 or Thanos >= v0.28.0.
                               enum:
                               - TLS10
                               - TLS11
@@ -7147,18 +7366,18 @@ spec:
                         ProxyConnectHeader optionally specifies headers to send to
                         proxies during CONNECT requests.
 
-                        It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                        It requires Prometheus >= v2.43.0, Alertmanager >= v0.25.0 or Thanos >= v0.32.0.
                       type: object
                       x-kubernetes-map-type: atomic
                     proxyFromEnvironment:
                       description: |-
                         Whether to use the proxy configuration defined by environment variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
 
-                        It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                        It requires Prometheus >= v2.43.0, Alertmanager >= v0.25.0 or Thanos >= v0.32.0.
                       type: boolean
                     proxyUrl:
                       description: '`proxyURL` defines the HTTP proxy server to use.'
-                      pattern: ^http(s)?://.+$
+                      pattern: ^(http|https|socks5)://.+$
                       type: string
                     queueConfig:
                       description: QueueConfig allows tuning of the remote write queue
@@ -7209,7 +7428,7 @@ spec:
                         sampleAgeLimit:
                           description: |-
                             SampleAgeLimit drops samples older than the limit.
-                            It requires Prometheus >= v2.50.0.
+                            It requires Prometheus >= v2.50.0 or Thanos >= v0.32.0.
                           pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                           type: string
                       type: object
@@ -7217,26 +7436,41 @@ spec:
                       description: Timeout for requests to the remote write endpoint.
                       pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                       type: string
+                    roundRobinDNS:
+                      description: |-
+                        When enabled:
+                            - The remote-write mechanism will resolve the hostname via DNS.
+                            - It will randomly select one of the resolved IP addresses and connect to it.
+
+                        When disabled (default behavior):
+                            - The Go standard library will handle hostname resolution.
+                            - It will attempt connections to each resolved IP address sequentially.
+
+                        Note: The connection timeout applies to the entire resolution and connection process.
+                              If disabled, the timeout is distributed across all connection attempts.
+
+                        It requires Prometheus >= v3.1.0 or Thanos >= v0.38.0.
+                      type: boolean
                     sendExemplars:
                       description: |-
                         Enables sending of exemplars over remote write. Note that
-                        exemplar-storage itself must be enabled using the `spec.enableFeature`
+                        exemplar-storage itself must be enabled using the `spec.enableFeatures`
                         option for exemplars to be scraped in the first place.
 
-                        It requires Prometheus >= v2.27.0.
+                        It requires Prometheus >= v2.27.0 or Thanos >= v0.24.0.
                       type: boolean
                     sendNativeHistograms:
                       description: |-
                         Enables sending of native histograms, also known as sparse histograms
                         over remote write.
 
-                        It requires Prometheus >= v2.40.0.
+                        It requires Prometheus >= v2.40.0 or Thanos >= v0.30.0.
                       type: boolean
                     sigv4:
                       description: |-
                         Sigv4 allows to configures AWS's Signature Verification 4 for the URL.
 
-                        It requires Prometheus >= v2.26.0.
+                        It requires Prometheus >= v2.26.0 or Thanos >= v0.24.0.
 
                         Cannot be set at the same time as `authorization`, `basicAuth`, `oauth2`, or `azureAd`.
                       properties:
@@ -7455,7 +7689,7 @@ spec:
                           description: |-
                             Maximum acceptable TLS version.
 
-                            It requires Prometheus >= v2.41.0.
+                            It requires Prometheus >= v2.41.0 or Thanos >= v0.31.0.
                           enum:
                           - TLS10
                           - TLS11
@@ -7466,7 +7700,7 @@ spec:
                           description: |-
                             Minimum acceptable TLS version.
 
-                            It requires Prometheus >= v2.35.0.
+                            It requires Prometheus >= v2.35.0 or Thanos >= v0.28.0.
                           enum:
                           - TLS10
                           - TLS11
@@ -7479,6 +7713,7 @@ spec:
                       type: object
                     url:
                       description: The URL of the endpoint to send samples to.
+                      minLength: 1
                       type: string
                     writeRelabelConfigs:
                       description: The list of remote write relabel configurations.
@@ -7571,6 +7806,20 @@ spec:
                   - url
                   type: object
                 type: array
+              remoteWriteReceiverMessageVersions:
+                description: |-
+                  List of the protobuf message versions to accept when receiving the
+                  remote writes.
+
+                  It requires Prometheus >= v2.54.0.
+                items:
+                  enum:
+                  - V1.0
+                  - V2.0
+                  type: string
+                minItems: 1
+                type: array
+                x-kubernetes-list-type: set
               replicaExternalLabelName:
                 description: |-
                   Name of Prometheus external label used to denote the replica name.
@@ -7717,6 +7966,12 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
+              ruleQueryOffset:
+                description: |-
+                  Defines the offset the rule evaluation timestamp of this particular group by the specified duration into the past.
+                  It requires Prometheus >= v2.53.0.
+                pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                type: string
               ruleSelector:
                 description: |-
                   PrometheusRule objects to be selected for rule evaluation. An empty
@@ -7794,6 +8049,18 @@ spec:
                         type: string
                     type: object
                 type: object
+              runtime:
+                description: RuntimeConfig configures the values for the Prometheus
+                  process behavior
+                properties:
+                  goGC:
+                    description: |-
+                      The Go garbage collection target percentage. Lowering this number may increase the CPU usage.
+                      See: https://tip.golang.org/doc/gc-guide#GOGC
+                    format: int32
+                    minimum: -1
+                    type: integer
+                type: object
               sampleLimit:
                 description: |-
                   SampleLimit defines per-scrape limit on number of scraped samples that will be accepted.
@@ -7827,6 +8094,49 @@ spec:
                             permissions on the `Nodes` objects.
                           type: boolean
                       type: object
+                    authorization:
+                      description: |-
+                        Authorization section for the ScrapeClass.
+                        It will only apply if the scrape resource doesn't specify any Authorization.
+                      properties:
+                        credentials:
+                          description: Selects a key of a Secret in the namespace
+                            that contains the credentials for authentication.
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        credentialsFile:
+                          description: File to read a secret from, mutually exclusive
+                            with `credentials`.
+                          type: string
+                        type:
+                          description: |-
+                            Defines the authentication type. The value is case-insensitive.
+
+                            "Basic" is not a supported value.
+
+                            Default: "Bearer"
+                          type: string
+                      type: object
                     default:
                       description: |-
                         Default indicates that the scrape applies to all scrape objects that
@@ -7834,6 +8144,19 @@ spec:
 
                         Only one scrape class can be set as the default.
                       type: boolean
+                    fallbackScrapeProtocol:
+                      description: |-
+                        The protocol to use if a scrape returns blank, unparseable, or otherwise invalid Content-Type.
+                        It will only apply if the scrape resource doesn't specify any FallbackScrapeProtocol
+
+                        It requires Prometheus >= v3.0.0.
+                      enum:
+                      - PrometheusProto
+                      - OpenMetricsText0.0.1
+                      - OpenMetricsText1.0.0
+                      - PrometheusText0.0.4
+                      - PrometheusText1.0.0
+                      type: string
                     metricRelabelings:
                       description: |-
                         MetricRelabelings configures the relabeling rules to apply to all samples before ingestion.
@@ -8184,7 +8507,7 @@ spec:
                           description: |-
                             Maximum acceptable TLS version.
 
-                            It requires Prometheus >= v2.41.0.
+                            It requires Prometheus >= v2.41.0 or Thanos >= v0.31.0.
                           enum:
                           - TLS10
                           - TLS11
@@ -8195,7 +8518,7 @@ spec:
                           description: |-
                             Minimum acceptable TLS version.
 
-                            It requires Prometheus >= v2.35.0.
+                            It requires Prometheus >= v2.35.0 or Thanos >= v0.28.0.
                           enum:
                           - TLS10
                           - TLS11
@@ -8323,6 +8646,18 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
+              scrapeFailureLogFile:
+                description: |-
+                  File to which scrape failures are logged.
+                  Reloading the configuration will reopen the file.
+
+                  If the filename has an empty path, e.g. 'file.log', The Prometheus Pods
+                  will mount the file into an emptyDir volume at `/var/log/prometheus`.
+                  If a full path is provided, e.g. '/var/log/prometheus/file.log', you
+                  must mount a volume in the specified directory and it must be writable.
+                  It requires Prometheus >= v2.55.0.
+                minLength: 1
+                type: string
               scrapeInterval:
                 default: 30s
                 description: |-
@@ -8339,6 +8674,8 @@ spec:
                   If unset, Prometheus uses its default value.
 
                   It requires Prometheus >= v2.49.0.
+
+                  `PrometheusText1.0.0` requires Prometheus >= v3.0.0.
                 items:
                   description: |-
                     ScrapeProtocol represents a protocol used by Prometheus for scraping metrics.
@@ -8347,17 +8684,20 @@ spec:
                     * `OpenMetricsText1.0.0`
                     * `PrometheusProto`
                     * `PrometheusText0.0.4`
+                    * `PrometheusText1.0.0`
                   enum:
                   - PrometheusProto
                   - OpenMetricsText0.0.1
                   - OpenMetricsText1.0.0
                   - PrometheusText0.0.4
+                  - PrometheusText1.0.0
                   type: string
                 type: array
                 x-kubernetes-list-type: set
               scrapeTimeout:
-                description: Number of seconds to wait until a scrape request times
-                  out.
+                description: |-
+                  Number of seconds to wait until a scrape request times out.
+                  The value cannot be greater than the scrape interval otherwise the operator will reject the resource.
                 pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                 type: string
               secrets:
@@ -8451,6 +8791,32 @@ spec:
                       Note that this field cannot be set when spec.os.name is windows.
                     format: int64
                     type: integer
+                  seLinuxChangePolicy:
+                    description: |-
+                      seLinuxChangePolicy defines how the container's SELinux label is applied to all volumes used by the Pod.
+                      It has no effect on nodes that do not support SELinux or to volumes does not support SELinux.
+                      Valid values are "MountOption" and "Recursive".
+
+                      "Recursive" means relabeling of all files on all Pod volumes by the container runtime.
+                      This may be slow for large volumes, but allows mixing privileged and unprivileged Pods sharing the same volume on the same node.
+
+                      "MountOption" mounts all eligible Pod volumes with `-o context` mount option.
+                      This requires all Pods that share the same volume to use the same SELinux label.
+                      It is not possible to share the same volume among privileged and unprivileged Pods.
+                      Eligible volumes are in-tree FibreChannel and iSCSI volumes, and all CSI volumes
+                      whose CSI driver announces SELinux support by setting spec.seLinuxMount: true in their
+                      CSIDriver instance. Other volumes are always re-labelled recursively.
+                      "MountOption" value is allowed only when SELinuxMount feature gate is enabled.
+
+                      If not specified and SELinuxMount feature gate is enabled, "MountOption" is used.
+                      If not specified and SELinuxMount feature gate is disabled, "MountOption" is used for ReadWriteOncePod volumes
+                      and "Recursive" for all other volumes.
+
+                      This field affects only Pods that have SELinux label set, either in PodSecurityContext or in SecurityContext of all containers.
+
+                      All Pods that use the same volume should use the same seLinuxChangePolicy, otherwise some pods can get stuck in ContainerCreating state.
+                      Note that this field cannot be set when spec.os.name is windows.
+                    type: string
                   seLinuxOptions:
                     description: |-
                       The SELinux context to be applied to all containers.
@@ -8700,25 +9066,84 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
+              serviceName:
+                description: |-
+                  The name of the service name used by the underlying StatefulSet(s) as the governing service.
+                  If defined, the Service  must be created before the Prometheus/PrometheusAgent resource in the same namespace and it must define a selector that matches the pod labels.
+                  If empty, the operator will create and manage a headless service named `prometheus-operated` for Prometheus resources,
+                  or `prometheus-agent-operated` for PrometheusAgent resources.
+                  When deploying multiple Prometheus/PrometheusAgent resources in the same namespace, it is recommended to specify a different value for each.
+                  See https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#stable-network-id for more details.
+                minLength: 1
+                type: string
               sha:
                 description: 'Deprecated: use ''spec.image'' instead. The image''s
                   digest can be specified as part of the image name.'
                 type: string
+              shardRetentionPolicy:
+                description: |-
+                  ShardRetentionPolicy defines the retention policy for the Prometheus shards.
+                  (Alpha) Using this field requires the 'PrometheusShardRetentionPolicy' feature gate to be enabled.
+
+                  The final goals for this feature can be seen at https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/proposals/202310-shard-autoscaling.md#graceful-scale-down-of-prometheus-servers,
+                  however, the feature is not yet fully implemented in this PR. The limitation being:
+                  * Retention duration is not settable, for now, shards are retained forever.
+                properties:
+                  retain:
+                    description: |-
+                      Defines the config for retention when the retention policy is set to `Retain`.
+                      This field is ineffective as of now.
+                    properties:
+                      retentionPeriod:
+                        description: |-
+                          Duration is a valid time duration that can be parsed by Prometheus model.ParseDuration() function.
+                          Supported units: y, w, d, h, m, s, ms
+                          Examples: `30s`, `1m`, `1h20m15s`, `15d`
+                        pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                        type: string
+                    required:
+                    - retentionPeriod
+                    type: object
+                  whenScaled:
+                    description: |-
+                      Defines the retention policy when the Prometheus shards are scaled down.
+                      * `Delete`, the operator will delete the pods from the scaled-down shard(s).
+                      * `Retain`, the operator will keep the pods from the scaled-down shard(s), so the data can still be queried.
+
+                      If not defined, the operator assumes the `Delete` value.
+                    enum:
+                    - Retain
+                    - Delete
+                    type: string
+                type: object
               shards:
                 description: |-
-                  Number of shards to distribute targets onto. `spec.replicas`
-                  multiplied by `spec.shards` is the total number of Pods created.
+                  Number of shards to distribute the scraped targets onto.
 
-                  Note that scaling down shards will not reshard data onto remaining
+                  `spec.replicas` multiplied by `spec.shards` is the total number of Pods
+                  being created.
+
+                  When not defined, the operator assumes only one shard.
+
+                  Note that scaling down shards will not reshard data onto the remaining
                   instances, it must be manually moved. Increasing shards will not reshard
                   data either but it will continue to be available from the same
-                  instances. To query globally, use Thanos sidecar and Thanos querier or
-                  remote write data to a central location.
+                  instances. To query globally, use either
+                  * Thanos sidecar + querier for query federation and Thanos Ruler for rules.
+                  * Remote-write to send metrics to a central location.
 
-                  Sharding is performed on the content of the `__address__` target meta-label
-                  for PodMonitors and ServiceMonitors and `__param_target__` for Probes.
+                  By default, the sharding of targets is performed on:
+                  * The `__address__` target's metadata label for PodMonitor,
+                  ServiceMonitor and ScrapeConfig resources.
+                  * The `__param_target__` label for Probe resources.
 
-                  Default: 1
+                  Users can define their own sharding implementation by setting the
+                  `__tmp_hash` label during the target discovery with relabeling
+                  configuration (either in the monitoring resources or via scrape class).
+
+                  You can also disable sharding on a specific target by setting the
+                  `__tmp_disable_sharding` label with relabeling configuration. When
+                  the label value isn't empty, all Prometheus shards will scrape the target.
                 format: int32
                 type: integer
               storage:
@@ -9382,18 +9807,15 @@ spec:
                                     persistent volume is being resized.
                                   type: string
                                 status:
+                                  description: |-
+                                    Status is the status of the condition.
+                                    Can be True, False, Unknown.
+                                    More info: https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/persistent-volume-claim-v1/#:~:text=state%20of%20pvc-,conditions.status,-(string)%2C%20required
                                   type: string
                                 type:
                                   description: |-
-                                    PersistentVolumeClaimConditionType defines the condition of PV claim.
-                                    Valid values are:
-                                      - "Resizing", "FileSystemResizePending"
-
-                                    If RecoverVolumeExpansionFailure feature gate is enabled, then following additional values can be expected:
-                                      - "ControllerResizeError", "NodeResizeError"
-
-                                    If VolumeAttributesClass feature gate is enabled, then following additional values can be expected:
-                                      - "ModifyVolumeError", "ModifyingVolume"
+                                    Type is the type of the condition.
+                                    More info: https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/persistent-volume-claim-v1/#:~:text=set%20to%20%27ResizeStarted%27.-,PersistentVolumeClaimCondition,-contains%20details%20about
                                   type: string
                               required:
                               - status
@@ -9455,6 +9877,16 @@ spec:
                   Note that the global limit only applies to scrape objects that don't specify an explicit limit value.
                   If you want to enforce a maximum limit for all scrape objects, refer to enforcedTargetLimit.
                 format: int64
+                type: integer
+              terminationGracePeriodSeconds:
+                description: |-
+                  Optional duration in seconds the pod needs to terminate gracefully.
+                  Value must be non-negative integer. The value zero indicates stop immediately via
+                  the kill signal (no opportunity to shut down) which may lead to data corruption.
+
+                  Defaults to 600 seconds.
+                format: int64
+                minimum: 0
                 type: integer
               thanos:
                 description: Defines the configuration of the optional Thanos sidecar.
@@ -9669,7 +10101,7 @@ spec:
                         description: |-
                           Maximum acceptable TLS version.
 
-                          It requires Prometheus >= v2.41.0.
+                          It requires Prometheus >= v2.41.0 or Thanos >= v0.31.0.
                         enum:
                         - TLS10
                         - TLS11
@@ -9680,7 +10112,7 @@ spec:
                         description: |-
                           Minimum acceptable TLS version.
 
-                          It requires Prometheus >= v2.35.0.
+                          It requires Prometheus >= v2.35.0 or Thanos >= v0.28.0.
                         enum:
                         - TLS10
                         - TLS11
@@ -10136,7 +10568,6 @@ spec:
                         - Ignore: nodeAffinity/nodeSelector are ignored. All nodes are included in the calculations.
 
                         If this value is nil, the behavior is equivalent to the Honor policy.
-                        This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.
                       type: string
                     nodeTaintsPolicy:
                       description: |-
@@ -10147,7 +10578,6 @@ spec:
                         - Ignore: node taints are ignored. All nodes are included.
 
                         If this value is nil, the behavior is equivalent to the Ignore policy.
-                        This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.
                       type: string
                     topologyKey:
                       description: |-
@@ -10388,7 +10818,7 @@ spec:
                         description: |-
                           Maximum acceptable TLS version.
 
-                          It requires Prometheus >= v2.41.0.
+                          It requires Prometheus >= v2.41.0 or Thanos >= v0.31.0.
                         enum:
                         - TLS10
                         - TLS11
@@ -10399,7 +10829,7 @@ spec:
                         description: |-
                           Minimum acceptable TLS version.
 
-                          It requires Prometheus >= v2.35.0.
+                          It requires Prometheus >= v2.35.0 or Thanos >= v0.28.0.
                         enum:
                         - TLS10
                         - TLS11
@@ -10523,6 +10953,8 @@ spec:
                       description: |-
                         awsElasticBlockStore represents an AWS Disk resource that is attached to a
                         kubelet's host machine and then exposed to the pod.
+                        Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+                        awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
                         More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
                       properties:
                         fsType:
@@ -10554,8 +10986,10 @@ spec:
                       - volumeID
                       type: object
                     azureDisk:
-                      description: azureDisk represents an Azure Data Disk mount on
-                        the host and bind mount to the pod.
+                      description: |-
+                        azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+                        Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+                        are redirected to the disk.csi.azure.com CSI driver.
                       properties:
                         cachingMode:
                           description: 'cachingMode is the Host Caching mode: None,
@@ -10593,8 +11027,10 @@ spec:
                       - diskURI
                       type: object
                     azureFile:
-                      description: azureFile represents an Azure File Service mount
-                        on the host and bind mount to the pod.
+                      description: |-
+                        azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+                        Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+                        are redirected to the file.csi.azure.com CSI driver.
                       properties:
                         readOnly:
                           description: |-
@@ -10613,8 +11049,9 @@ spec:
                       - shareName
                       type: object
                     cephfs:
-                      description: cephFS represents a Ceph FS mount on the host that
-                        shares a pod's lifetime
+                      description: |-
+                        cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+                        Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.
                       properties:
                         monitors:
                           description: |-
@@ -10666,6 +11103,8 @@ spec:
                     cinder:
                       description: |-
                         cinder represents a cinder volume attached and mounted on kubelets host machine.
+                        Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+                        are redirected to the cinder.csi.openstack.org CSI driver.
                         More info: https://examples.k8s.io/mysql-cinder-pd/README.md
                       properties:
                         fsType:
@@ -10775,8 +11214,7 @@ spec:
                       x-kubernetes-map-type: atomic
                     csi:
                       description: csi (Container Storage Interface) represents ephemeral
-                        storage that is handled by certain external CSI drivers (Beta
-                        feature).
+                        storage that is handled by certain external CSI drivers.
                       properties:
                         driver:
                           description: |-
@@ -11242,6 +11680,7 @@ spec:
                       description: |-
                         flexVolume represents a generic volume resource that is
                         provisioned/attached using an exec based plugin.
+                        Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.
                       properties:
                         driver:
                           description: driver is the name of the driver to use for
@@ -11287,9 +11726,9 @@ spec:
                       - driver
                       type: object
                     flocker:
-                      description: flocker represents a Flocker volume attached to
-                        a kubelet's host machine. This depends on the Flocker control
-                        service being running
+                      description: |-
+                        flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
+                        Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.
                       properties:
                         datasetName:
                           description: |-
@@ -11305,6 +11744,8 @@ spec:
                       description: |-
                         gcePersistentDisk represents a GCE Disk resource that is attached to a
                         kubelet's host machine and then exposed to the pod.
+                        Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+                        gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
                         More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
                       properties:
                         fsType:
@@ -11340,7 +11781,7 @@ spec:
                     gitRepo:
                       description: |-
                         gitRepo represents a git repository at a particular revision.
-                        DEPRECATED: GitRepo is deprecated. To provision a container with a git repo, mount an
+                        Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
                         EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
                         into the Pod's container.
                       properties:
@@ -11364,6 +11805,7 @@ spec:
                     glusterfs:
                       description: |-
                         glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
+                        Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
                         More info: https://examples.k8s.io/volumes/glusterfs/README.md
                       properties:
                         endpoints:
@@ -11423,7 +11865,7 @@ spec:
                         The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
                         The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
                         The volume will be mounted read-only (ro) and non-executable files (noexec).
-                        Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath).
+                        Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
                         The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
                       properties:
                         pullPolicy:
@@ -11573,8 +12015,9 @@ spec:
                       - claimName
                       type: object
                     photonPersistentDisk:
-                      description: photonPersistentDisk represents a PhotonController
-                        persistent disk attached and mounted on kubelets host machine
+                      description: |-
+                        photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+                        Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.
                       properties:
                         fsType:
                           description: |-
@@ -11590,8 +12033,11 @@ spec:
                       - pdID
                       type: object
                     portworxVolume:
-                      description: portworxVolume represents a portworx volume attached
-                        and mounted on kubelets host machine
+                      description: |-
+                        portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+                        Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+                        are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+                        is on.
                       properties:
                         fsType:
                           description: |-
@@ -11956,8 +12402,9 @@ spec:
                           x-kubernetes-list-type: atomic
                       type: object
                     quobyte:
-                      description: quobyte represents a Quobyte mount on the host
-                        that shares a pod's lifetime
+                      description: |-
+                        quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+                        Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.
                       properties:
                         group:
                           description: |-
@@ -11996,6 +12443,7 @@ spec:
                     rbd:
                       description: |-
                         rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+                        Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
                         More info: https://examples.k8s.io/volumes/rbd/README.md
                       properties:
                         fsType:
@@ -12068,8 +12516,9 @@ spec:
                       - monitors
                       type: object
                     scaleIO:
-                      description: scaleIO represents a ScaleIO persistent volume
-                        attached and mounted on Kubernetes nodes.
+                      description: |-
+                        scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+                        Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.
                       properties:
                         fsType:
                           default: xfs
@@ -12201,8 +12650,9 @@ spec:
                           type: string
                       type: object
                     storageos:
-                      description: storageOS represents a StorageOS volume attached
-                        and mounted on Kubernetes nodes.
+                      description: |-
+                        storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+                        Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.
                       properties:
                         fsType:
                           description: |-
@@ -12247,8 +12697,10 @@ spec:
                           type: string
                       type: object
                     vsphereVolume:
-                      description: vsphereVolume represents a vSphere volume attached
-                        and mounted on kubelets host machine
+                      description: |-
+                        vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+                        Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+                        are redirected to the csi.vsphere.vmware.com CSI driver.
                       properties:
                         fsType:
                           description: |-
@@ -12353,7 +12805,12 @@ spec:
                     description: Defines the TLS parameters for HTTPS.
                     properties:
                       cert:
-                        description: Contains the TLS certificate for the server.
+                        description: |-
+                          Secret or ConfigMap containing the TLS certificate for the web server.
+
+                          Either `keySecret` or `keyFile` must be defined.
+
+                          It is mutually exclusive with `certFile`.
                         properties:
                           configMap:
                             description: ConfigMap containing data to use for the
@@ -12406,20 +12863,28 @@ spec:
                         type: object
                       certFile:
                         description: |-
-                          Path to the TLS certificate file in the Prometheus container for the server.
-                          Mutually exclusive with `cert`.
+                          Path to the TLS certificate file in the container for the web server.
+
+                          Either `keySecret` or `keyFile` must be defined.
+
+                          It is mutually exclusive with `cert`.
                         type: string
                       cipherSuites:
                         description: |-
-                          List of supported cipher suites for TLS versions up to TLS 1.2. If empty,
-                          Go default cipher suites are used. Available cipher suites are documented
-                          in the go documentation: https://golang.org/pkg/crypto/tls/#pkg-constants
+                          List of supported cipher suites for TLS versions up to TLS 1.2.
+
+                          If not defined, the Go default cipher suites are used.
+                          Available cipher suites are documented in the Go documentation:
+                          https://golang.org/pkg/crypto/tls/#pkg-constants
                         items:
                           type: string
                         type: array
                       client_ca:
-                        description: Contains the CA certificate for client certificate
+                        description: |-
+                          Secret or ConfigMap containing the CA certificate for client certificate
                           authentication to the server.
+
+                          It is mutually exclusive with `clientCAFile`.
                         properties:
                           configMap:
                             description: ConfigMap containing data to use for the
@@ -12472,30 +12937,43 @@ spec:
                         type: object
                       clientAuthType:
                         description: |-
-                          Server policy for client authentication. Maps to ClientAuth Policies.
+                          The server policy for client TLS authentication.
+
                           For more detail on clientAuth options:
                           https://golang.org/pkg/crypto/tls/#ClientAuthType
                         type: string
                       clientCAFile:
                         description: |-
-                          Path to the CA certificate file for client certificate authentication to the server.
-                          Mutually exclusive with `client_ca`.
+                          Path to the CA certificate file for client certificate authentication to
+                          the server.
+
+                          It is mutually exclusive with `client_ca`.
                         type: string
                       curvePreferences:
                         description: |-
                           Elliptic curves that will be used in an ECDHE handshake, in preference
-                          order. Available curves are documented in the go documentation:
+                          order.
+
+                          Available curves are documented in the Go documentation:
                           https://golang.org/pkg/crypto/tls/#CurveID
                         items:
                           type: string
                         type: array
                       keyFile:
                         description: |-
-                          Path to the TLS key file in the Prometheus container for the server.
-                          Mutually exclusive with `keySecret`.
+                          Path to the TLS private key file in the container for the web server.
+
+                          If defined, either `cert` or `certFile` must be defined.
+
+                          It is mutually exclusive with `keySecret`.
                         type: string
                       keySecret:
-                        description: Secret containing the TLS key for the server.
+                        description: |-
+                          Secret containing the TLS private key for the web server.
+
+                          Either `cert` or `certFile` must be defined.
+
+                          It is mutually exclusive with `keyFile`.
                         properties:
                           key:
                             description: The key of the secret to select from.  Must
@@ -12519,18 +12997,17 @@ spec:
                         type: object
                         x-kubernetes-map-type: atomic
                       maxVersion:
-                        description: Maximum TLS version that is acceptable. Defaults
-                          to TLS13.
+                        description: Maximum TLS version that is acceptable.
                         type: string
                       minVersion:
-                        description: Minimum TLS version that is acceptable. Defaults
-                          to TLS12.
+                        description: Minimum TLS version that is acceptable.
                         type: string
                       preferServerCipherSuites:
                         description: |-
-                          Controls whether the server selects the
-                          client's most preferred cipher suite, or the server's most preferred
-                          cipher suite. If true then the server's preference, as expressed in
+                          Controls whether the server selects the client's most preferred cipher
+                          suite, or the server's most preferred cipher suite.
+
+                          If true then the server's preference, as expressed in
                           the order of elements in cipherSuites, is used.
                         type: boolean
                     type: object
@@ -12578,9 +13055,11 @@ spec:
                       type: string
                     status:
                       description: Status of the condition.
+                      minLength: 1
                       type: string
                     type:
                       description: Type of the condition being reported.
+                      minLength: 1
                       type: string
                   required:
                   - lastTransitionTime
@@ -12679,3 +13158,4 @@ spec:
         specReplicasPath: .spec.shards
         statusReplicasPath: .status.shards
       status: {}
+{{- end -}}
