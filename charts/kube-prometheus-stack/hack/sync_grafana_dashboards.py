@@ -29,11 +29,10 @@ def change_style(style, representer):
 
 refs = {
     # renovate: git-refs=https://github.com/prometheus-operator/kube-prometheus branch=main
-    'ref.kube-prometheus': 'f0abeaf2c817f8ec51f8e6ca0497d0d87b5a1c0c',
+    'ref.kube-prometheus': 'ac9a50923df1dec1e4357a5d1bbeb4f83750b1ef',
     # renovate: git-refs=https://github.com/kubernetes-monitoring/kubernetes-mixin branch=master
-    'ref.kubernetes-mixin': 'cc7c60b9182346be662703df319e4ea56e317208',
-    # renovate: git-refs=https://github.com/etcd-io/etcd branch=main
-    'ref.etcd': 'f10ebf6f9d615e2c8f7fd01b1e2e4e2c19407f7e',
+    'ref.kubernetes-mixin': 'afc97334f48dcfd772c593d45a4cdc99fc1414cf',
+    'ref.etcd': '479c194f3f5754f039a74c396f3e70f6419edf8e',
 }
 
 # Source files list
@@ -113,6 +112,18 @@ replacement_map = {
     'job=\\"prometheus-k8s\\",namespace=\\"monitoring\\"': {
         'replacement': '',
     },
+    'job=\\"kubelet\\"': {
+        'replacement': 'job=\\"`}}{{ $kubeletJob }}{{`\\"',
+        'init': '{{- $kubeletJob := include "kube-prometheus-stack-kubelet.name" . }}'},
+    'job=\\"kube-controller-manager\\"': {
+        'replacement': 'job=\\"`}}{{ $kubeControllerManagerJob }}{{`\\"',
+        'init': '{{- $kubeControllerManagerJob := include "kube-prometheus-stack-kube-controller-manager.name" . }}'},
+    'job=\\"kube-scheduler\\"': {
+        'replacement': 'job=\\"`}}{{ $kubeSchedulerJob }}{{`\\"',
+        'init': '{{- $kubeSchedulerJob := include "kube-prometheus-stack-kube-scheduler.name" . }}'},
+    'job=\\"kube-proxy\\"': {
+        'replacement': 'job=\\"`}}{{ $kubeProxyJob }}{{`\\"',
+        'init': '{{- $kubeProxyJob := include "kube-prometheus-stack-kube-proxy.name" . }}'},
 }
 
 # standard header
@@ -122,7 +133,7 @@ Do not change in-place! In order to change this file first read following link:
 https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack/hack
 */ -}}
 {{- $kubeTargetVersion := default .Capabilities.KubeVersion.GitVersion .Values.kubeTargetVersionOverride }}
-{{- if and (or .Values.grafana.enabled .Values.grafana.forceDeployDashboards) (semverCompare ">=%(min_kubernetes)s" $kubeTargetVersion) (semverCompare "<%(max_kubernetes)s" $kubeTargetVersion) .Values.grafana.defaultDashboardsEnabled%(condition)s }}
+{{- if and (or .Values.grafana.enabled .Values.grafana.forceDeployDashboards) (semverCompare ">=%(min_kubernetes)s" $kubeTargetVersion) (semverCompare "<%(max_kubernetes)s" $kubeTargetVersion) .Values.grafana.defaultDashboardsEnabled%(condition)s }}%(init_line)s
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -132,10 +143,10 @@ metadata:
 {{ toYaml .Values.grafana.sidecar.dashboards.annotations | indent 4 }}
   labels:
     {{- if $.Values.grafana.sidecar.dashboards.label }}
-    {{ $.Values.grafana.sidecar.dashboards.label }}: {{ ternary $.Values.grafana.sidecar.dashboards.labelValue "1" (not (empty $.Values.grafana.sidecar.dashboards.labelValue)) | quote }}
+    {{ tpl $.Values.grafana.sidecar.dashboards.label $ }}: {{ ((tpl $.Values.grafana.sidecar.dashboards.labelValue $) | default 1) | quote }}
     {{- end }}
     app: {{ template "kube-prometheus-stack.name" $ }}-grafana
-{{ include "kube-prometheus-stack.labels" $ | indent 4 }}
+    {{- include "kube-prometheus-stack.labels" $ | nindent 4 }}
 data:
 '''
 
@@ -153,11 +164,15 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{ end }}
   labels:
+    {{- if $.Values.grafana.sidecar.dashboards.label }}
+    {{ tpl $.Values.grafana.sidecar.dashboards.label $ }}: {{ ((tpl $.Values.grafana.sidecar.dashboards.labelValue $) | default 1) | quote }}
+    {{- end }}
     app: {{ template "kube-prometheus-stack.name" $ }}-grafana
+    {{- include "kube-prometheus-stack.labels" $ | nindent 4 }}
 spec:
   allowCrossNamespaceImport: true
   resyncPeriod: {{ .Values.grafana.operator.resyncPeriod | quote | default "10m" }}
-  folder: {{ .Values.grafana.operator.folder | quote }}
+  {{- include "kube-prometheus-stack.grafana.operator.folder" . | nindent 2 }}
   instanceSelector:
     matchLabels:
     {{- if .Values.grafana.operator.matchLabels }}
@@ -218,13 +233,16 @@ def patch_dashboards_json(content, multicluster_key):
 
         content = json.dumps(content_struct, separators=(',', ':'))
         content = content.replace('":multicluster:"', '`}}{{ if %s }}0{{ else }}2{{ end }}{{`' % multicluster_key,)
+        init_line = ''
 
         for line in replacement_map:
+            if line in content and replacement_map[line].get('init'):
+                init_line += '\n' + replacement_map[line]['init']
             content = content.replace(line, replacement_map[line]['replacement'])
     except (ValueError, KeyError):
         pass
 
-    return "{{`" + content + "`}}"
+    return init_line, "{{`" + content + "`}}"
 
 
 def patch_json_set_timezone_as_variable(content):
@@ -261,16 +279,18 @@ def jsonnet_import_callback(base, rel):
 
 
 def write_group_to_file(resource_name, content, url, destination, min_kubernetes, max_kubernetes, multicluster_key):
+    init_line, content = patch_dashboards_json(content, multicluster_key)
+
     # initialize header
     lines = header % {
         'name': resource_name,
         'url': url,
         'condition': condition_map.get(resource_name, ''),
         'min_kubernetes': min_kubernetes,
-        'max_kubernetes': max_kubernetes
+        'max_kubernetes': max_kubernetes,
+        'init_line': init_line,
     }
 
-    content = patch_dashboards_json(content, multicluster_key)
     content = patch_json_set_timezone_as_variable(content)
     content = patch_json_set_editable_as_variable(content)
     content = patch_json_set_interval_as_variable(content)

@@ -29,11 +29,10 @@ def change_style(style, representer):
 
 refs = {
     # renovate: git-refs=https://github.com/prometheus-operator/kube-prometheus branch=main
-    'ref.kube-prometheus': 'f0abeaf2c817f8ec51f8e6ca0497d0d87b5a1c0c',
+    'ref.kube-prometheus': 'ac9a50923df1dec1e4357a5d1bbeb4f83750b1ef',
     # renovate: git-refs=https://github.com/kubernetes-monitoring/kubernetes-mixin branch=master
-    'ref.kubernetes-mixin': 'cc7c60b9182346be662703df319e4ea56e317208',
-    # renovate: git-refs=https://github.com/etcd-io/etcd branch=main
-    'ref.etcd': 'f10ebf6f9d615e2c8f7fd01b1e2e4e2c19407f7e',
+    'ref.kubernetes-mixin': 'afc97334f48dcfd772c593d45a4cdc99fc1414cf',
+    'ref.etcd': '479c194f3f5754f039a74c396f3e70f6419edf8e',
 }
 
 # Source files list
@@ -205,10 +204,22 @@ replacement_map = {
         'replacement': 'job="{{ $kubeStateMetricsJob }}", namespace{{ $namespaceOperator }}"{{ $targetNamespace }}"',
         'limitGroup': ['kubernetes-apps'],
         'init': '{{- $targetNamespace := .Values.defaultRules.appNamespacesTarget }}{{- $namespaceOperator := .Values.defaultRules.appNamespacesOperator | default "=~" }}'},
-    'job="kubelet"': {
-        'replacement': 'job="kubelet", namespace{{ $namespaceOperator }}"{{ $targetNamespace }}"',
+    'job="kubelet", metrics_path="/metrics': {
+        'replacement': 'job="{{ $kubeletJob }}", namespace{{ $namespaceOperator }}"{{ $targetNamespace }}", metrics_path="/metrics',
         'limitGroup': ['kubernetes-storage'],
-        'init': '{{- $targetNamespace := .Values.defaultRules.appNamespacesTarget }}{{- $namespaceOperator := .Values.defaultRules.appNamespacesOperator | default "=~" }}'},
+        'init': '{{- $kubeletJob := include "kube-prometheus-stack-kubelet.name" . }}\n{{- $targetNamespace := .Values.defaultRules.appNamespacesTarget }}\n{{- $namespaceOperator := .Values.defaultRules.appNamespacesOperator | default "=~" }}'},
+    'job="kubelet"': {
+        'replacement': 'job="{{ $kubeletJob }}"',
+        'init': '{{- $kubeletJob := include "kube-prometheus-stack-kubelet.name" . }}'},
+    'job="kube-controller-manager"': {
+        'replacement': 'job="{{ $kubeControllerManagerJob }}"',
+        'init': '{{- $kubeControllerManagerJob := include "kube-prometheus-stack-kube-controller-manager.name" . }}'},
+    'job="kube-scheduler"': {
+        'replacement': 'job="{{ $kubeSchedulerJob }}"',
+        'init': '{{- $kubeSchedulerJob := include "kube-prometheus-stack-kube-scheduler.name" . }}'},
+    'job="kube-proxy"': {
+        'replacement': 'job="{{ $kubeProxyJob }}"',
+        'init': '{{- $kubeProxyJob := include "kube-prometheus-stack-kube-proxy.name" . }}'},
     'runbook_url: https://runbooks.prometheus-operator.dev/runbooks/': {
         'replacement': 'runbook_url: {{ .Values.defaultRules.runbookUrl }}/',
         'init': ''},

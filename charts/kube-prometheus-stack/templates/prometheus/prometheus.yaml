@@ -23,7 +23,7 @@ spec:
 {{- if not (kindIs "invalid" .Values.prometheus.prometheusSpec.automountServiceAccountToken) }}
   automountServiceAccountToken: {{ .Values.prometheus.prometheusSpec.automountServiceAccountToken }}
 {{- end }}
-{{- if and (not .Values.prometheus.agentMode) (or .Values.prometheus.prometheusSpec.alertingEndpoints .Values.alertmanager.enabled) }}
+{{- if and (not .Values.prometheus.agentMode) (not .Values.prometheus.prometheusSpec.disableAlerting) (or .Values.prometheus.prometheusSpec.alertingEndpoints .Values.alertmanager.enabled) }}
   alerting:
     alertmanagers:
 {{- if .Values.prometheus.prometheusSpec.alertingEndpoints }}
@@ -61,7 +61,7 @@ spec:
   image: "{{ $registry }}/{{ .Values.prometheus.prometheusSpec.image.repository }}"
   {{- end }}
   imagePullPolicy: "{{ .Values.prometheus.prometheusSpec.image.pullPolicy }}"
-  version: {{ default .Values.prometheus.prometheusSpec.image.tag .Values.prometheus.prometheusSpec.version }}
+  version: "{{ default .Values.prometheus.prometheusSpec.image.tag .Values.prometheus.prometheusSpec.version }}"
 {{- end }}
 {{- if .Values.prometheus.prometheusSpec.additionalArgs }}
   additionalArgs:
@@ -98,7 +98,7 @@ spec:
   paused: {{ .Values.prometheus.prometheusSpec.paused }}
   replicas: {{ .Values.prometheus.prometheusSpec.replicas }}
   shards: {{ .Values.prometheus.prometheusSpec.shards }}
-  logLevel:  {{ .Values.prometheus.prometheusSpec.logLevel }}
+  logLevel:  {{ .Values.prometheus.prometheusSpec.logLevel | quote }}
   logFormat:  {{ .Values.prometheus.prometheusSpec.logFormat }}
   listenLocal: {{ .Values.prometheus.prometheusSpec.listenLocal }}
   enableOTLPReceiver: {{ .Values.prometheus.prometheusSpec.enableOTLPReceiver }}
@@ -143,6 +143,15 @@ spec:
 {{- end }}
 {{- if .Values.prometheus.prometheusSpec.scrapeTimeout }}
   scrapeTimeout: {{ .Values.prometheus.prometheusSpec.scrapeTimeout }}
+{{- end }}
+{{- if .Values.prometheus.prometheusSpec.convertClassicHistogramsToNHCB }}
+  convertClassicHistogramsToNHCB: {{ .Values.prometheus.prometheusSpec.convertClassicHistogramsToNHCB }}
+{{- end }}
+{{- if .Values.prometheus.prometheusSpec.scrapeClassicHistograms }}
+  scrapeClassicHistograms: {{ .Values.prometheus.prometheusSpec.scrapeClassicHistograms }}
+{{- end }}
+{{- if .Values.prometheus.prometheusSpec.scrapeNativeHistograms }}
+  scrapeNativeHistograms: {{ .Values.prometheus.prometheusSpec.scrapeNativeHistograms }}
 {{- end }}
 {{- if and (not .Values.prometheus.agentMode) .Values.prometheus.prometheusSpec.evaluationInterval }}
   evaluationInterval: {{ .Values.prometheus.prometheusSpec.evaluationInterval }}
@@ -253,6 +262,13 @@ spec:
   securityContext:
 {{ toYaml .Values.prometheus.prometheusSpec.securityContext | indent 4 }}
 {{- end }}
+{{- if .Values.prometheus.prometheusSpec.dnsConfig }}
+  dnsConfig:
+{{ toYaml .Values.prometheus.prometheusSpec.dnsConfig | indent 4 }}
+{{- end }}
+{{- if .Values.prometheus.prometheusSpec.dnsPolicy }}
+  dnsPolicy: {{ .Values.prometheus.prometheusSpec.dnsPolicy }}
+{{- end }}
 {{- if not .Values.prometheus.agentMode }}
 {{- if .Values.prometheus.prometheusSpec.ruleNamespaceSelector }}
   ruleNamespaceSelector:
@@ -267,7 +283,7 @@ spec:
   ruleSelector:
     matchLabels:
       release: {{ $.Release.Name | quote }}
-{{ else }}
+{{ else if not (kindIs "invalid" .Values.prometheus.prometheusSpec.ruleSelector) }}
   ruleSelector: {}
 {{- end }}
 {{- end }}
@@ -448,7 +464,11 @@ spec:
       name: "{{ printf "%s-%s" (include "kube-prometheus-stack.fullname" $) . | trunc 63 | trimSuffix "-" }}"
 {{- end }}
 {{- if .Values.prometheus.prometheusSpec.excludedFromEnforcement }}
+  {{- if kindIs "string" .Values.prometheus.prometheusSpec.excludedFromEnforcement }}
+{{ tpl .Values.prometheus.prometheusSpec.excludedFromEnforcement . | indent 4 }}
+  {{- else }}
 {{ tpl (toYaml .Values.prometheus.prometheusSpec.excludedFromEnforcement | indent 4) . }}
+  {{- end }}
 {{- end }}
 {{- end }}
 {{- if and (not .Values.prometheus.agentMode) .Values.prometheus.prometheusSpec.queryLogFile }}
@@ -484,10 +504,23 @@ spec:
 {{- if .Values.prometheus.prometheusSpec.minReadySeconds }}
   minReadySeconds: {{ .Values.prometheus.prometheusSpec.minReadySeconds }}
 {{- end }}
+{{- if .Values.prometheus.prometheusSpec.podManagementPolicy }}
+  podManagementPolicy: {{ .Values.prometheus.prometheusSpec.podManagementPolicy }}
+{{- end }}
+{{- if .Values.prometheus.prometheusSpec.updateStrategy }}
+  updateStrategy:
+{{ toYaml .Values.prometheus.prometheusSpec.updateStrategy | indent 4 }}
+{{- end }}
+{{- if .Values.prometheus.prometheusSpec.terminationGracePeriodSeconds }}
+  terminationGracePeriodSeconds: {{ .Values.prometheus.prometheusSpec.terminationGracePeriodSeconds }}
+{{- end }}
 {{- if .Values.prometheus.prometheusSpec.maximumStartupDurationSeconds }}
   maximumStartupDurationSeconds: {{ .Values.prometheus.prometheusSpec.maximumStartupDurationSeconds }}
 {{- end }}
   hostNetwork: {{ .Values.prometheus.prometheusSpec.hostNetwork }}
+{{- if kindIs "bool" .Values.prometheus.prometheusSpec.hostUsers }}
+  hostUsers: {{ .Values.prometheus.prometheusSpec.hostUsers }}
+{{- end }}
 {{- if .Values.prometheus.prometheusSpec.hostAliases }}
   hostAliases:
 {{ toYaml .Values.prometheus.prometheusSpec.hostAliases | indent 4 }}

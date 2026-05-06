@@ -7,6 +7,13 @@ Expand the name of the chart.
 {{- end -}}
 
 {{/*
+Return the port for prometheus.
+*/}}
+{{- define "prometheus.port" -}}
+9090
+{{- end -}}
+
+{{/*
 Create chart name and version as used by the chart label.
 */}}
 {{- define "prometheus.chart" -}}
@@ -73,13 +80,26 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- end -}}
 
 {{/*
-Create a fully qualified alertmanager name for communicating and check to ensure that `alertmanager` exists before trying to use it with the user via NOTES.txt
+Create a fully qualified alertmanager name to use even when the subchart is not available
+from the charts directory
 */}}
 {{- define "prometheus.alertmanager.fullname" -}}
-{{- if .Subcharts.alertmanager -}}
-{{- template "alertmanager.fullname" .Subcharts.alertmanager -}}
+{{- if (index .Subcharts "alertmanager") -}}
+{{- include "alertmanager.fullname" (index .Subcharts "alertmanager") -}}
 {{- else -}}
-{{- "alertmanager not found" -}}
+{{- printf "%s-%s" .Release.Name "alertmanager" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Create a fully qualified pushgateway name that works even when the dependency
+charts are not downloaded locally.
+*/}}
+{{- define "prometheus.pushgateway.fullname" -}}
+{{- if (index .Subcharts "prometheus-pushgateway") -}}
+{{- include "prometheus-pushgateway.fullname" (index .Subcharts "prometheus-pushgateway") -}}
+{{- else -}}
+{{- printf "%s-%s" .Release.Name "prometheus-pushgateway" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 
@@ -105,13 +125,6 @@ Get KubeVersion removing pre-release information.
 */}}
 {{- define "prometheus.kubeVersion" -}}
   {{- default .Capabilities.KubeVersion.Version (regexFind "v[0-9]+\\.[0-9]+\\.[0-9]+" .Capabilities.KubeVersion.Version) -}}
-{{- end -}}
-
-{{/*
-Return the appropriate apiVersion for deployment.
-*/}}
-{{- define "prometheus.deployment.apiVersion" -}}
-{{- print "apps/v1" -}}
 {{- end -}}
 
 {{/*
@@ -178,4 +191,3 @@ Define prometheus.server.remoteRead producing a list of remoteRead configuration
 {{- end -}}
 {{ toYaml $remoteReads }}
 {{- end -}}
-
