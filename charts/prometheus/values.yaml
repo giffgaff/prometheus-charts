@@ -1028,6 +1028,9 @@ scrapeConfigs:
       - source_labels: [__meta_kubernetes_pod_phase]
         regex: Pending|Succeeded|Failed|Completed
         action: drop
+      - source_labels: [__meta_kubernetes_pod_ready]
+        action: keep
+        regex: true
       - source_labels: [__meta_kubernetes_pod_node_name]
         action: replace
         target_label: node
@@ -1079,6 +1082,9 @@ scrapeConfigs:
       - source_labels: [__meta_kubernetes_pod_phase]
         regex: Pending|Succeeded|Failed|Completed
         action: drop
+      - source_labels: [__meta_kubernetes_pod_ready]
+        action: keep
+        regex: true
       - source_labels: [__meta_kubernetes_pod_node_name]
         action: replace
         target_label: node
